@@ -4,6 +4,9 @@
 """
 Escriba el codigo que ejecute la accion solicitada en cada pregunta.
 """
+import zipfile
+from pathlib import Path
+import pandas as pd
 
 
 def pregunta_01():
@@ -71,3 +74,39 @@ def pregunta_01():
 
 
     """
+    # Rutas base
+    zip_path = Path("files/input.zip")
+    input_dir = Path("input")
+    output_dir = Path("files/output")
+
+    # Crear carpeta de salida si no existe
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Descomprimir el archivo si aún no existe la carpeta input
+    if not input_dir.exists():
+        with zipfile.ZipFile(zip_path, "r") as z:
+            z.extractall()
+
+    # 2. Función para construir un dataset a partir de las carpetas
+    def build_dataset(base_dir):
+        phrases = []
+        targets = []
+
+        for sentiment_dir in base_dir.iterdir():
+            if sentiment_dir.is_dir():
+                target = sentiment_dir.name
+                for txt_file in sentiment_dir.glob("*.txt"):
+                    with open(txt_file, "r", encoding="utf-8") as f:
+                        text = f.read().strip()
+                    phrases.append(text)
+                    targets.append(target)
+
+        return pd.DataFrame({"phrase": phrases, "target": targets})
+
+    # 3. Crear los datasets
+    train_df = build_dataset(input_dir / "train")
+    test_df = build_dataset(input_dir / "test")
+
+    # 4. Guardar los CSVs en la carpeta de salida
+    train_df.to_csv(output_dir / "train_dataset.csv", index=False)
+    test_df.to_csv(output_dir / "test_dataset.csv", index=False)
